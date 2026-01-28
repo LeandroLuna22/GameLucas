@@ -1,0 +1,23 @@
+@charset "UTF-8";
+
+* {
+box-sizing: border-box;
+}
+
+
+body {
+margin: 0;
+height: 100vh;
+display: flex;
+justify-content: center;
+align-items: center;
+background: linear-gradient(#5c94fc, #bfe9ff);
+font-family: Arial, sans-serif;
+}
+
+
+canvas {
+background: #6bd16b;
+border: 4px solid #333;
+image-rendering: pixelated;
+}
