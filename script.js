@@ -1,58 +1,27 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-/* =========================
-   RESOLUÇÃO LÓGICA DO JOGO
-   ========================= */
-const GAME_WIDTH = 1280;
-const GAME_HEIGHT = 720;
-
-canvas.width = GAME_WIDTH;
-canvas.height = GAME_HEIGHT;
-
-/* =========================
-   ESCALA DA TELA
-   ========================= */
+/* ===== CANVAS FULL ===== */
 function resize() {
-  const scale = Math.min(
-    window.innerWidth / GAME_WIDTH,
-    window.innerHeight / GAME_HEIGHT
-  );
-
-  canvas.style.width = Math.floor(GAME_WIDTH * scale) + 'px';
-  canvas.style.height = Math.floor(GAME_HEIGHT * scale) + 'px';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
-
-window.addEventListener('resize', resize);
 resize();
+window.addEventListener('resize', resize);
 
-/* =========================
-   MUNDO
-   ========================= */
+/* ===== MUNDO ===== */
 const world = {
   width: 3000,
-  height: GAME_HEIGHT
+  height: 600
 };
 
-/* =========================
-   CÂMERA
-   ========================= */
-const camera = {
-  x: 0
-};
+/* ===== CAMERA ===== */
+const camera = { x: 0, y: 0 };
 
-/* =========================
-   CONFIG
-   ========================= */
-const gravity = 0.6;
-const keys = {};
-
-/* =========================
-   PLAYER
-   ========================= */
+/* ===== PLAYER ===== */
 const player = {
   x: 100,
-  y: 100,
+  y: 300,
   w: 32,
   h: 32,
   vx: 0,
@@ -62,34 +31,27 @@ const player = {
   onGround: false
 };
 
-/* =========================
-   PLATAFORMAS
-   ========================= */
-const platforms = [
-  { x: 0, y: GAME_HEIGHT - 200, w: world.width, h: 200 }, // chão
-  { x: 300, y: 420, w: 150, h: 20 },
-  { x: 600, y: 360, w: 150, h: 20 },
-  { x: 900, y: 300, w: 150, h: 20 },
-  { x: 1300, y: 420, w: 150, h: 20 },
-  { x: 1700, y: 350, w: 200, h: 20 }
-];
+const gravity = 0.6;
+const keys = {};
 
-/* =========================
-   INPUT
-   ========================= */
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-/* =========================
-   UPDATE
-   ========================= */
+/* ===== PLATAFORMAS ===== */
+const platforms = [
+  { x: 0, y: 500, w: world.width, h: 100 },
+  { x: 300, y: 420, w: 150, h: 20 },
+  { x: 600, y: 360, w: 150, h: 20 },
+  { x: 900, y: 300, w: 150, h: 20 }
+];
+
+/* ===== UPDATE ===== */
 function update() {
   player.vx = 0;
+  if (keys.ArrowLeft) player.vx = -player.speed;
+  if (keys.ArrowRight) player.vx = player.speed;
 
-  if (keys['ArrowLeft']) player.vx = -player.speed;
-  if (keys['ArrowRight']) player.vx = player.speed;
-
-  if (keys['Space'] && player.onGround) {
+  if (keys.Space && player.onGround) {
     player.vy = -player.jump;
     player.onGround = false;
   }
@@ -99,11 +61,8 @@ function update() {
   player.x += player.vx;
   player.y += player.vy;
 
-  /* Limites do mundo */
   player.x = Math.max(0, Math.min(player.x, world.width - player.w));
-  player.y = Math.min(player.y, world.height - player.h);
 
-  /* Colisão */
   player.onGround = false;
   platforms.forEach(p => {
     if (
@@ -118,40 +77,33 @@ function update() {
     }
   });
 
-  /* CÂMERA HORIZONTAL */
-  camera.x = player.x - GAME_WIDTH / 2 + player.w / 2;
-  camera.x = Math.max(0, Math.min(camera.x, world.width - GAME_WIDTH));
+  /* CAMERA */
+  camera.x = player.x - canvas.width / 2 + player.w / 2;
+  camera.x = Math.max(0, Math.min(camera.x, world.width - canvas.width));
 }
 
-/* =========================
-   DRAW
-   ========================= */
+/* ===== DRAW ===== */
 function draw() {
-  ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
   ctx.translate(-camera.x, 0);
 
-  // Player
+  ctx.fillStyle = '#654321';
+  platforms.forEach(p =>
+    ctx.fillRect(p.x, p.y, p.w, p.h)
+  );
+
   ctx.fillStyle = '#ff0000';
   ctx.fillRect(player.x, player.y, player.w, player.h);
-
-  // Plataformas
-  ctx.fillStyle = '#654321';
-  platforms.forEach(p => {
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-  });
 
   ctx.restore();
 }
 
-/* =========================
-   LOOP
-   ========================= */
+/* ===== LOOP ===== */
 function loop() {
   update();
   draw();
   requestAnimationFrame(loop);
 }
-
 loop();

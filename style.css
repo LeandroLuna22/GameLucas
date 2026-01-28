@@ -1,8 +1,4 @@
-@charset "UTF-8";
-
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
@@ -10,19 +6,12 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #000; /* fundo das barras */
 }
 
-/* container implícito do jogo */
-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* canvas SEMPRE centralizado */
 canvas {
   display: block;
+  width: 100vw;
+  height: 100vh;
   background: #6bd16b;
   image-rendering: pixelated;
 }
