@@ -1,23 +1,28 @@
 @charset "UTF-8";
 
 * {
-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000; /* fundo das barras */
+}
 
+/* container implícito do jogo */
 body {
-margin: 0;
-height: 100vh;
-display: flex;
-justify-content: center;
-align-items: center;
-background: linear-gradient(#5c94fc, #bfe9ff);
-font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-
+/* canvas SEMPRE centralizado */
 canvas {
-background: #6bd16b;
-border: 4px solid #333;
-image-rendering: pixelated;
+  display: block;
+  background: #6bd16b;
+  image-rendering: pixelated;
 }

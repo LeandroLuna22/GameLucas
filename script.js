@@ -1,30 +1,58 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-/* ===== TELA ===== */
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+/* =========================
+   RESOLUÇÃO LÓGICA DO JOGO
+   ========================= */
+const GAME_WIDTH = 1280;
+const GAME_HEIGHT = 720;
 
-/* ===== MUNDO ===== */
+canvas.width = GAME_WIDTH;
+canvas.height = GAME_HEIGHT;
+
+/* =========================
+   ESCALA DA TELA
+   ========================= */
+function resize() {
+  const scale = Math.min(
+    window.innerWidth / GAME_WIDTH,
+    window.innerHeight / GAME_HEIGHT
+  );
+
+  canvas.style.width = Math.floor(GAME_WIDTH * scale) + 'px';
+  canvas.style.height = Math.floor(GAME_HEIGHT * scale) + 'px';
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+/* =========================
+   MUNDO
+   ========================= */
 const world = {
   width: 3000,
-  height: 600
+  height: GAME_HEIGHT
 };
 
-/* ===== CAMERA ===== */
+/* =========================
+   CÂMERA
+   ========================= */
 const camera = {
-  x: 0,
-  y: 0
+  x: 0
 };
 
-/* ===== CONFIG ===== */
+/* =========================
+   CONFIG
+   ========================= */
 const gravity = 0.6;
 const keys = {};
 
-/* ===== PLAYER ===== */
+/* =========================
+   PLAYER
+   ========================= */
 const player = {
   x: 100,
-  y: 300,
+  y: 100,
   w: 32,
   h: 32,
   vx: 0,
@@ -34,9 +62,11 @@ const player = {
   onGround: false
 };
 
-/* ===== PLATAFORMAS ===== */
+/* =========================
+   PLATAFORMAS
+   ========================= */
 const platforms = [
-  { x: 0, y: 500, w: world.width, h: 100 }, // chão
+  { x: 0, y: GAME_HEIGHT - 200, w: world.width, h: 200 }, // chão
   { x: 300, y: 420, w: 150, h: 20 },
   { x: 600, y: 360, w: 150, h: 20 },
   { x: 900, y: 300, w: 150, h: 20 },
@@ -44,11 +74,15 @@ const platforms = [
   { x: 1700, y: 350, w: 200, h: 20 }
 ];
 
-/* ===== INPUT ===== */
+/* =========================
+   INPUT
+   ========================= */
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-/* ===== UPDATE ===== */
+/* =========================
+   UPDATE
+   ========================= */
 function update() {
   player.vx = 0;
 
@@ -67,8 +101,9 @@ function update() {
 
   /* Limites do mundo */
   player.x = Math.max(0, Math.min(player.x, world.width - player.w));
+  player.y = Math.min(player.y, world.height - player.h);
 
-  /* Colisão com plataformas */
+  /* Colisão */
   player.onGround = false;
   platforms.forEach(p => {
     if (
@@ -83,17 +118,19 @@ function update() {
     }
   });
 
-  /* ===== CAMERA SEGUE PLAYER ===== */
-  camera.x = player.x - canvas.width / 2 + player.w / 2;
-  camera.x = Math.max(0, Math.min(camera.x, world.width - canvas.width));
+  /* CÂMERA HORIZONTAL */
+  camera.x = player.x - GAME_WIDTH / 2 + player.w / 2;
+  camera.x = Math.max(0, Math.min(camera.x, world.width - GAME_WIDTH));
 }
 
-/* ===== DRAW ===== */
+/* =========================
+   DRAW
+   ========================= */
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
   ctx.save();
-  ctx.translate(-camera.x, -camera.y);
+  ctx.translate(-camera.x, 0);
 
   // Player
   ctx.fillStyle = '#ff0000';
@@ -108,7 +145,9 @@ function draw() {
   ctx.restore();
 }
 
-/* ===== LOOP ===== */
+/* =========================
+   LOOP
+   ========================= */
 function loop() {
   update();
   draw();
