@@ -1,5 +1,10 @@
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+/* ===== PLAYER IMAGE ===== */
+const playerImg = new Image();
+playerImg.src = 'player.png';
+
 
 /* ===== CANVAS FULL ===== */
 function resize() {
@@ -7,46 +12,84 @@ function resize() {
   canvas.height = window.innerHeight;
 }
 resize();
-window.addEventListener('resize', resize);
+window.addEventListener("resize", resize);
 
 /* ===== MUNDO ===== */
 const world = {
-  width: 3000,
-  height: 600
+  width: 4000,
+  height: 640
 };
 
+/* ===== TILES ===== */
+const TILE = 32;
+const COLS = Math.floor(world.width / TILE);
+const ROWS = Math.floor(world.height / TILE);
+
+/*
+0 = vazio
+1 = sólido
+*/
+const map = [];
+
+for (let y = 0; y < ROWS; y++) {
+  map[y] = [];
+  for (let x = 0; x < COLS; x++) {
+
+    if (y >= ROWS - 3) {
+      map[y][x] = 1; // chão
+    }
+
+    else if (y === ROWS - 6 && x % 6 === 0) {
+      map[y][x] = 3; // plataformas
+    }
+
+    else if (y === ROWS - 9 && x % 12 === 0) {
+      map[y][x] = 2; // blocos suspensos
+    }
+
+    else {
+      map[y][x] = 0;
+    }
+  }
+}
+
+
 /* ===== CAMERA ===== */
-const camera = { x: 0, y: 0 };
+const camera = { x: 0 };
 
 /* ===== PLAYER ===== */
 const player = {
   x: 100,
-  y: 300,
-  w: 32,
-  h: 32,
+  y: 100,
+  w: 28,
+  h: 28,
   vx: 0,
   vy: 0,
-  speed: 5,
-  jump: 14,
+  speed: 4,
+  jump: 13,
   onGround: false
 };
 
 const gravity = 0.6;
 const keys = {};
 
-window.addEventListener('keydown', e => keys[e.code] = true);
-window.addEventListener('keyup', e => keys[e.code] = false);
+/* ===== INPUT ===== */
+window.addEventListener("keydown", e => keys[e.code] = true);
+window.addEventListener("keyup", e => keys[e.code] = false);
 
-/* ===== PLATAFORMAS ===== */
-const platforms = [
-  { x: 0, y: 500, w: world.width, h: 100 },
-  { x: 300, y: 420, w: 150, h: 20 },
-  { x: 600, y: 360, w: 150, h: 20 },
-  { x: 900, y: 300, w: 150, h: 20 }
-];
+/* ===== TILE CHECK ===== */
+function solidAt(px, py) {
+  const cx = Math.floor(px / TILE);
+  const cy = Math.floor(py / TILE);
+
+  if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return false;
+  return map[cy][cx] === 1;
+}
 
 /* ===== UPDATE ===== */
 function update() {
+
+  /* input */
   player.vx = 0;
   if (keys.ArrowLeft) player.vx = -player.speed;
   if (keys.ArrowRight) player.vx = player.speed;
@@ -58,26 +101,44 @@ function update() {
 
   player.vy += gravity;
 
+  /* ===== HORIZONTAL COLLISION ===== */
   player.x += player.vx;
-  player.y += player.vy;
 
+function solidAt(px, py) {
+  const cx = Math.floor(px / TILE);
+  const cy = Math.floor(py / TILE);
+
+  if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return false;
+
+  return map[cy][cx] !== 0; // tudo que não é vazio é sólido
+}
+
+  if (
+    solidAt(player.x, player.y) ||
+    solidAt(player.x + player.w, player.y) ||
+    solidAt(player.x, player.y + player.h - 1) ||
+    solidAt(player.x + player.w, player.y + player.h - 1)
+  ) {
+    player.x -= player.vx;
+  }
+
+  /* ===== VERTICAL COLLISION ===== */
+  player.y += player.vy;
+  player.onGround = false;
+
+  if (
+    solidAt(player.x + 2, player.y + player.h) ||
+    solidAt(player.x + player.w - 2, player.y + player.h)
+  ) {
+    player.y = Math.floor((player.y + player.h) / TILE) * TILE - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  /* limites do mundo */
   player.x = Math.max(0, Math.min(player.x, world.width - player.w));
 
-  player.onGround = false;
-  platforms.forEach(p => {
-    if (
-      player.x < p.x + p.w &&
-      player.x + player.w > p.x &&
-      player.y + player.h <= p.y + player.vy &&
-      player.y + player.h + player.vy >= p.y
-    ) {
-      player.y = p.y - player.h;
-      player.vy = 0;
-      player.onGround = true;
-    }
-  });
-
-  /* CAMERA */
+  /* câmera */
   camera.x = player.x - canvas.width / 2 + player.w / 2;
   camera.x = Math.max(0, Math.min(camera.x, world.width - canvas.width));
 }
@@ -89,13 +150,38 @@ function draw() {
   ctx.save();
   ctx.translate(-camera.x, 0);
 
-  ctx.fillStyle = '#654321';
-  platforms.forEach(p =>
-    ctx.fillRect(p.x, p.y, p.w, p.h)
-  );
+  /* tiles */
+for (let y = 0; y < ROWS; y++) {
+  for (let x = 0; x < COLS; x++) {
 
-  ctx.fillStyle = '#ff0000';
-  ctx.fillRect(player.x, player.y, player.w, player.h);
+    const tile = map[y][x];
+    if (tile === 0) continue;
+
+    if (tile === 1) ctx.fillStyle = "#068b01";     // chão
+    if (tile === 2) ctx.fillStyle = "#c68642";     // bloco
+    if (tile === 3) ctx.fillStyle = "#8b5a2b";     // plataforma
+
+    ctx.fillRect(
+      x * TILE,
+      y * TILE,
+      TILE - 1,
+      TILE - 1
+    );
+  }
+}
+
+
+  /* player */
+  
+
+  ctx.drawImage(
+  playerImg,
+  player.x -1,   // pequeno ajuste visual
+  player.y -1,
+  150,
+  150
+);
+
 
   ctx.restore();
 }
@@ -107,3 +193,4 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
+
