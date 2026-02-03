@@ -1,147 +1,150 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-/* ===== PLAYER IMAGE ===== */
-const playerImg = new Image();
-playerImg.src = 'player.png';
+// Resolução lógica fixa (16:9)
+const GAME_WIDTH = 1280;
+const GAME_HEIGHT = 720;
 
-
-/* ===== CANVAS FULL ===== */
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  // O canvas interno SEMPRE terá esse tamanho, independente do monitor
+  canvas.width = GAME_WIDTH;
+  canvas.height = GAME_HEIGHT;
+  
+  // Essencial para não borrar após o resize
+  ctx.imageSmoothingEnabled = false;
 }
 resize();
-window.addEventListener("resize", resize);
+// Remova o window.addEventListener('resize', resize) se não quiser que
+// a resolução interna mude, apenas o CSS cuida do tamanho visual.
+// Não precisamos mais do listener de resize para o canvas.width 
+// se a resolução for fixa, mas é bom manter para o ctx.imageSmoothingEnabled
+
+function getTouchPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (e.touches[0].clientX - rect.left) * scaleX,
+    y: (e.touches[0].clientY - rect.top) * scaleY
+  };
+}
+
+window.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const pos = getTouchPos(e);
+
+  // Agora usamos 'pos.x' e 'pos.y' que estão na escala 1280x720
+  if (pos.y < BASE_HEIGHT / 2) {
+    if (player.onGround) {
+      player.vy = -player.jump;
+      player.onGround = false;
+    }
+  } else {
+    if (pos.x < BASE_WIDTH / 2) keys.ArrowLeft = true;
+    else keys.ArrowRight = true;
+  }
+}, { passive: false });
 
 /* ===== MUNDO ===== */
 const world = {
-  width: 4000,
-  height: 640
+  width: 2000,
+  height: 720
 };
 
-/* ===== TILES ===== */
-const TILE = 32;
-const COLS = Math.floor(world.width / TILE);
-const ROWS = Math.floor(world.height / TILE);
-
-/*
-0 = vazio
-1 = sólido
-*/
-const map = [];
-
-for (let y = 0; y < ROWS; y++) {
-  map[y] = [];
-  for (let x = 0; x < COLS; x++) {
-
-    if (y >= ROWS - 3) {
-      map[y][x] = 1; // chão
-    }
-
-    else if (y === ROWS - 6 && x % 6 === 0) {
-      map[y][x] = 3; // plataformas
-    }
-
-    else if (y === ROWS - 9 && x % 12 === 0) {
-      map[y][x] = 2; // blocos suspensos
-    }
-
-    else {
-      map[y][x] = 0;
-    }
-  }
-}
-
-
 /* ===== CAMERA ===== */
-const camera = { x: 0 };
+const camera = { x: 0, y: 0 };
 
 /* ===== PLAYER ===== */
 const player = {
   x: 100,
-  y: 100,
-  w: 28,
-  h: 28,
+  y: 300,
+  w: 32,
+  h: 32,
   vx: 0,
   vy: 0,
-  speed: 4,
-  jump: 13,
+  speed: 5,
+  jump: 14,
   onGround: false
 };
 
 const gravity = 0.6;
 const keys = {};
 
-/* ===== INPUT ===== */
-window.addEventListener("keydown", e => keys[e.code] = true);
-window.addEventListener("keyup", e => keys[e.code] = false);
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
 
-/* ===== TILE CHECK ===== */
-function solidAt(px, py) {
-  const cx = Math.floor(px / TILE);
-  const cy = Math.floor(py / TILE);
-
-  if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return false;
-  return map[cy][cx] === 1;
+/* ===== CONTROLES TOUCH ===== */
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  // Mantém os pixels nítidos após o resize
+  ctx.imageSmoothingEnabled = false; 
 }
 
-/* ===== UPDATE ===== */
-function update() {
+/* Nos eventos de touch, adicione preventDefault */
+window.addEventListener('touchstart', e => {
+    e.preventDefault(); // Impede scrolls e gestos do navegador
+    // ... seu código de toque aqui (usando e.touches[0])
+}, { passive: false });
 
-  /* input */
+window.addEventListener('touchend', () => {
+    keys.ArrowLeft = false;
+    keys.ArrowRight = false;
+});
+
+/* ===== PLATAFORMAS ===== */
+const platforms = [
+  { x: 0, y: 550, w: 2000, h: 200 },
+  { x: 300, y: 420, w: 150, h: 20 },
+  { x: 600, y: 360, w: 150, h: 20 },
+  { x: 900, y: 300, w: 150, h: 20 }
+];
+
+function update() {
+  // 1. Movimento Horizontal (vx)
   player.vx = 0;
   if (keys.ArrowLeft) player.vx = -player.speed;
   if (keys.ArrowRight) player.vx = player.speed;
 
+  // 2. Movimento Vertical (vy) - PULO
+  // Se o pulo "vai para a frente" sozinho, certifique-se de que vy só afeta o eixo Y
   if (keys.Space && player.onGround) {
-    player.vy = -player.jump;
+    player.vy = -player.jump; // Força negativa para subir
     player.onGround = false;
   }
 
+  // 3. Aplica Gravidade
   player.vy += gravity;
 
-  /* ===== HORIZONTAL COLLISION ===== */
-  player.x += player.vx;
+  // 4. Aplica as velocidades à posição
+  player.x += player.vx; // Move pros lados
+  player.y += player.vy; // Move pra cima/baixo
 
-function solidAt(px, py) {
-  const cx = Math.floor(px / TILE);
-  const cy = Math.floor(py / TILE);
-
-  if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return false;
-
-  return map[cy][cx] !== 0; // tudo que não é vazio é sólido
-}
-
-  if (
-    solidAt(player.x, player.y) ||
-    solidAt(player.x + player.w, player.y) ||
-    solidAt(player.x, player.y + player.h - 1) ||
-    solidAt(player.x + player.w, player.y + player.h - 1)
-  ) {
-    player.x -= player.vx;
-  }
-
-  /* ===== VERTICAL COLLISION ===== */
-  player.y += player.vy;
-  player.onGround = false;
-
-  if (
-    solidAt(player.x + 2, player.y + player.h) ||
-    solidAt(player.x + player.w - 2, player.y + player.h)
-  ) {
-    player.y = Math.floor((player.y + player.h) / TILE) * TILE - player.h;
-    player.vy = 0;
-    player.onGround = true;
-  }
-
-  /* limites do mundo */
+  // 5. Limites do Mundo
   player.x = Math.max(0, Math.min(player.x, world.width - player.w));
 
-  /* câmera */
+  // 6. Colisão com Plataformas
+  player.onGround = false;
+  platforms.forEach(p => {
+    if (
+      player.x < p.x + p.w &&
+      player.x + player.w > p.x &&
+      player.y + player.h <= p.y + 10 && 
+      player.y + player.h + player.vy >= p.y
+    ) {
+      if (player.vy > 0) { // Só colide se estiver a cair
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+      }
+    }
+  });
+
+  /* CAMERA */
   camera.x = player.x - canvas.width / 2 + player.w / 2;
   camera.x = Math.max(0, Math.min(camera.x, world.width - canvas.width));
 }
+
 
 /* ===== DRAW ===== */
 function draw() {
@@ -150,38 +153,13 @@ function draw() {
   ctx.save();
   ctx.translate(-camera.x, 0);
 
-  /* tiles */
-for (let y = 0; y < ROWS; y++) {
-  for (let x = 0; x < COLS; x++) {
+  // Desenha Chão/Plataformas
+  ctx.fillStyle = '#654321';
+  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
 
-    const tile = map[y][x];
-    if (tile === 0) continue;
-
-    if (tile === 1) ctx.fillStyle = "#068b01";     // chão
-    if (tile === 2) ctx.fillStyle = "#c68642";     // bloco
-    if (tile === 3) ctx.fillStyle = "#8b5a2b";     // plataforma
-
-    ctx.fillRect(
-      x * TILE,
-      y * TILE,
-      TILE - 1,
-      TILE - 1
-    );
-  }
-}
-
-
-  /* player */
-  
-
-  ctx.drawImage(
-  playerImg,
-  player.x -1,   // pequeno ajuste visual
-  player.y -1,
-  150,
-  150
-);
-
+  // Desenha Player
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(player.x, player.y, player.w, player.h);
 
   ctx.restore();
 }
@@ -193,4 +171,3 @@ function loop() {
   requestAnimationFrame(loop);
 }
 loop();
-
